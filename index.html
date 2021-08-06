@@ -8,6 +8,8 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <link rel="stylesheet" href="css/leaflet.css">
         <link rel="stylesheet" href="css/qgis2web.css"><link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
         <style>
         html, body, #map {
             width: 100%;
@@ -30,6 +32,9 @@
         <script src="js/rbush.min.js"></script>
         <script src="js/labelgun.min.js"></script>
         <script src="js/labels.js"></script>
+        <script src="js/tailDT.js"></script>
+<script src="js/nouislider.min.js"></script>
+<script src="js/wNumb.js"></script>
         <script src="data/districts_2.js"></script>
         <script src="data/poi_3.js"></script>
         <script>
@@ -411,6 +416,268 @@
               addLabel(layer, i);
               i++;
         });
+        var mapDiv = document.getElementById('map');
+        var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+        row.style.height = "100%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "99%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv)
+        var Filters = {"Allegiance": "str","District": "str","Type": "str","Status": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+        var i = 0;
+        layer_poi_3.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['Name'] !== null?String('<div style="color: #000000; font-size: 13pt; font-weight: bold; font-family: \'Garamond\', sans-serif;">' + layer.feature.properties['Name']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_poi_3'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Allegiance = document.createElement('div');
+            div_Allegiance.id = "div_Allegiance";
+            div_Allegiance.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Allegiance);
+            sel_Allegiance = document.createElement('select');
+            sel_Allegiance.multiple = true;
+            sel_Allegiance.size = 3;
+            sel_Allegiance.id = "sel_Allegiance";
+            var Allegiance_options_str = "<option value='' unselected></option>";
+            sel_Allegiance.onchange = function(){filterFunc()};
+            Allegiance_options_str  += '<option value="NULL">NULL</option>';
+            Allegiance_options_str  += '<option value="Kintargo">Kintargo</option>';
+            Allegiance_options_str  += '<option value="Thrune">Thrune</option>';
+            sel_Allegiance.innerHTML = Allegiance_options_str;
+            div_Allegiance.appendChild(sel_Allegiance);
+            var lab_Allegiance = document.createElement('div');
+            lab_Allegiance.innerHTML = 'Allegiance';
+            lab_Allegiance.className = 'filterlabel';
+            div_Allegiance.appendChild(lab_Allegiance);
+            var reset_Allegiance = document.createElement('div');
+            reset_Allegiance.innerHTML = 'clear filter';
+            reset_Allegiance.className = 'filterlabel';
+            reset_Allegiance.onclick = function() {
+                var options = document.getElementById("sel_Allegiance").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Allegiance.appendChild(reset_Allegiance);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_District = document.createElement('div');
+            div_District.id = "div_District";
+            div_District.className= "filterselect";
+            document.getElementById("menu").appendChild(div_District);
+            sel_District = document.createElement('select');
+            sel_District.multiple = true;
+            sel_District.size = 8;
+            sel_District.id = "sel_District";
+            var District_options_str = "<option value='' unselected></option>";
+            sel_District.onchange = function(){filterFunc()};
+            District_options_str  += '<option value="Castle District">Castle District</option>';
+            District_options_str  += '<option value="Jarvis End">Jarvis End</option>';
+            District_options_str  += '<option value="Old Kintargo">Old Kintargo</option>';
+            District_options_str  += '<option value="Redroof">Redroof</option>';
+            District_options_str  += '<option value="Temple Hill">Temple Hill</option>';
+            District_options_str  += '<option value="The Greens">The Greens</option>';
+            District_options_str  += '<option value="Villegre">Villegre</option>';
+            District_options_str  += '<option value="Yolubilis Harbor">Yolubilis Harbor</option>';
+            sel_District.innerHTML = District_options_str;
+            div_District.appendChild(sel_District);
+            var lab_District = document.createElement('div');
+            lab_District.innerHTML = 'District';
+            lab_District.className = 'filterlabel';
+            div_District.appendChild(lab_District);
+            var reset_District = document.createElement('div');
+            reset_District.innerHTML = 'clear filter';
+            reset_District.className = 'filterlabel';
+            reset_District.onclick = function() {
+                var options = document.getElementById("sel_District").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_District.appendChild(reset_District);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Type = document.createElement('div');
+            div_Type.id = "div_Type";
+            div_Type.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Type);
+            sel_Type = document.createElement('select');
+            sel_Type.multiple = true;
+            sel_Type.size = 10;
+            sel_Type.id = "sel_Type";
+            var Type_options_str = "<option value='' unselected></option>";
+            sel_Type.onchange = function(){filterFunc()};
+            Type_options_str  += '<option value="Cemetery">Cemetery</option>';
+            Type_options_str  += '<option value="Commerce">Commerce</option>';
+            Type_options_str  += '<option value="Community">Community</option>';
+            Type_options_str  += '<option value="Entertainment">Entertainment</option>';
+            Type_options_str  += '<option value="Gate">Gate</option>';
+            Type_options_str  += '<option value="Government">Government</option>';
+            Type_options_str  += '<option value="Inn">Inn</option>';
+            Type_options_str  += '<option value="Park">Park</option>';
+            Type_options_str  += '<option value="Residential">Residential</option>';
+            Type_options_str  += '<option value="School">School</option>';
+            Type_options_str  += '<option value="Temple">Temple</option>';
+            sel_Type.innerHTML = Type_options_str;
+            div_Type.appendChild(sel_Type);
+            var lab_Type = document.createElement('div');
+            lab_Type.innerHTML = 'Type';
+            lab_Type.className = 'filterlabel';
+            div_Type.appendChild(lab_Type);
+            var reset_Type = document.createElement('div');
+            reset_Type.innerHTML = 'clear filter';
+            reset_Type.className = 'filterlabel';
+            reset_Type.onclick = function() {
+                var options = document.getElementById("sel_Type").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Type.appendChild(reset_Type);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Status = document.createElement('div');
+            div_Status.id = "div_Status";
+            div_Status.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Status);
+            sel_Status = document.createElement('select');
+            sel_Status.multiple = true;
+            sel_Status.size = 2;
+            sel_Status.id = "sel_Status";
+            var Status_options_str = "<option value='' unselected></option>";
+            sel_Status.onchange = function(){filterFunc()};
+            Status_options_str  += '<option value="NULL">NULL</option>';
+            Status_options_str  += '<option value="Abandoned">Abandoned</option>';
+            sel_Status.innerHTML = Status_options_str;
+            div_Status.appendChild(sel_Status);
+            var lab_Status = document.createElement('div');
+            lab_Status.innerHTML = 'Status';
+            lab_Status.className = 'filterlabel';
+            div_Status.appendChild(lab_Status);
+            var reset_Status = document.createElement('div');
+            reset_Status.innerHTML = 'clear filter';
+            reset_Status.className = 'filterlabel';
+            reset_Status.onclick = function() {
+                var options = document.getElementById("sel_Status").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Status.appendChild(reset_Status);
         L.ImageOverlay.include({
             getBounds: function () {
                 return this._bounds;
